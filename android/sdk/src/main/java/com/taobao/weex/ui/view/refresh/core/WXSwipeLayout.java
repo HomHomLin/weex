@@ -213,6 +213,10 @@ import android.os.Build;
 import android.support.v4.view.NestedScrollingParent;
 import android.support.v4.view.NestedScrollingParentHelper;
 import android.support.v4.view.ViewCompat;
+import android.support.v7.widget.GridLayoutManager;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.StaggeredGridLayoutManager;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
 import android.util.TypedValue;
@@ -222,11 +226,69 @@ import android.view.View;
 import android.widget.AbsListView;
 import android.widget.FrameLayout;
 
-public class WXSwipeLayout extends FrameLayout implements NestedScrollingParent {
+import com.taobao.weex.ui.view.listview.WXRecyclerView;
+
+public class WXSwipeLayout extends FrameLayout implements NestedScrollingParent,
+        WXRecyclerView.WXRVOnScrollListener {
 
   private NestedScrollingParentHelper parentHelper;
   private WXOnRefreshListener onRefreshListener;
   private WXOnLoadingListener onLoadingListener;
+
+  private int mLoadMorePose = 0;//loadmore-pose
+
+  private boolean mCustomLoadmoreMore = true;
+
+  @Override
+  public void onScrollStateChanged(int state) {
+    WXRecyclerView wxRecyclerView = getRecyclerView();
+    if (wxRecyclerView != null && mPullLoadEnable && !isRefreshing() && state == RecyclerView.SCROLL_STATE_IDLE && onLoadingListener != null) {
+      RecyclerView.LayoutManager layoutManager = wxRecyclerView.getLayoutManager();
+      int lastVisibleItemPosition = 0;
+      if (layoutManager instanceof GridLayoutManager) {
+        lastVisibleItemPosition = ((GridLayoutManager) layoutManager).findLastVisibleItemPosition();
+      } else if (layoutManager instanceof StaggeredGridLayoutManager) {
+        int[] into = new int[((StaggeredGridLayoutManager) layoutManager).getSpanCount()];
+        ((StaggeredGridLayoutManager) layoutManager).findLastVisibleItemPositions(into);
+        lastVisibleItemPosition = findMax(into);
+      } else {
+        lastVisibleItemPosition = ((LinearLayoutManager) layoutManager).findLastVisibleItemPosition();
+      }
+      if (layoutManager.getChildCount() > 0
+              && lastVisibleItemPosition >= layoutManager.getItemCount() - 1 - mLoadMorePose && layoutManager.getItemCount() > layoutManager.getChildCount()) {
+        mRefreshing = true;
+        mCurrentAction = LOAD_MORE;
+        isConfirm = true;
+//      if (mFootView instanceof LoadingMoreFooter) {
+//        ((LoadingMoreFooter) mFootView).setState(LoadingMoreFooter.STATE_LOADING);
+//      } else {
+//        footerView.setVisibility(View.VISIBLE);
+//      }
+        wxRecyclerView.addFooter();
+        wxRecyclerView.updateFooter("加载中...");
+        onLoadingListener.onLoading();
+      }
+    }
+  }
+
+  /**
+   * set loadmore pose
+   * @param pos
+   */
+  public void setLoadMorePose(int pos){
+    mLoadMorePose = pos;
+  }
+
+
+  private int findMax(int[] lastPositions) {
+    int max = lastPositions[0];
+    for (int value : lastPositions) {
+      if (value > max) {
+        max = value;
+      }
+    }
+    return max;
+  }
 
   /**
    * On refresh Callback, call on start refresh
@@ -352,7 +414,7 @@ public class WXSwipeLayout extends FrameLayout implements NestedScrollingParent 
    */
   private void setRefreshView() {
     // SetUp HeaderView
-    FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, 0);
+    LayoutParams lp = new LayoutParams(LayoutParams.MATCH_PARENT, 0);
     headerView = new WXRefreshView(getContext());
     headerView.setStartEndTrim(0, 0.75f);
     headerView.setBackgroundColor(mRefreshViewBgColor);
@@ -361,16 +423,36 @@ public class WXSwipeLayout extends FrameLayout implements NestedScrollingParent 
     headerView.setContentGravity(Gravity.BOTTOM);
     addView(headerView, lp);
 
-    // SetUp FooterView
-    lp = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, 0);
-    lp.gravity = Gravity.BOTTOM;
-    footerView = new WXRefreshView(getContext());
-    footerView.setStartEndTrim(0.5f, 1.25f);
-    footerView.setBackgroundColor(mRefreshViewBgColor);
-    footerView.setProgressBgColor(mProgressBgColor);
-    footerView.setProgressColor(mProgressColor);
-    footerView.setContentGravity(Gravity.TOP);
-    addView(footerView, lp);
+    WXRecyclerView wxRecyclerView = getRecyclerView();
+    if(wxRecyclerView != null){
+      wxRecyclerView.setOnScrollListener(this);
+    }else{
+      // SetUp FooterView
+      lp = new LayoutParams(LayoutParams.MATCH_PARENT, 0);
+      lp.gravity = Gravity.BOTTOM;
+      footerView = new WXRefreshView(getContext());
+      footerView.setStartEndTrim(0.5f, 1.25f);
+      footerView.setBackgroundColor(mRefreshViewBgColor);
+      footerView.setProgressBgColor(mProgressBgColor);
+      footerView.setProgressColor(mProgressColor);
+      footerView.setContentGravity(Gravity.TOP);
+      addView(footerView, lp);
+    }
+  }
+
+  /**
+   * return targetview as WXRecyclerView if targetview instanceof WXRecyclerView
+   * @return
+     */
+  public WXRecyclerView getRecyclerView(){
+    if(mCustomLoadmoreMore && mTargetView != null && mTargetView instanceof WXRecyclerView){
+      return (WXRecyclerView)mTargetView;
+    }
+    return null;
+  }
+
+  public boolean isTargetOfWXRV(){
+    return mCustomLoadmoreMore && mTargetView != null && mTargetView instanceof WXRecyclerView;
   }
 
   @Override
@@ -423,7 +505,7 @@ public class WXSwipeLayout extends FrameLayout implements NestedScrollingParent 
       if (dy < 0 && !canChildScrollUp()) {
         mCurrentAction = PULL_REFRESH;
         isConfirm = true;
-      } else if (dy > 0 && !canChildScrollDown()) {
+      } else if (dy > 0 && !canChildScrollDown() && !isTargetOfWXRV()) {
         mCurrentAction = LOAD_MORE;
         isConfirm = true;
       }
@@ -491,7 +573,7 @@ public class WXSwipeLayout extends FrameLayout implements NestedScrollingParent 
       headerView.setProgressRotation(lp.height / refreshViewFlowHeight);
       moveTargetView(lp.height);
       return true;
-    } else if (!canChildScrollDown() && mPullLoadEnable && mCurrentAction == LOAD_MORE) {
+    } else if (!isTargetOfWXRV() && !canChildScrollDown() && mPullLoadEnable && mCurrentAction == LOAD_MORE) {
       // Load more
       LayoutParams lp = (LayoutParams) footerView.getLayoutParams();
       lp.height -= distanceY;
@@ -542,7 +624,7 @@ public class WXSwipeLayout extends FrameLayout implements NestedScrollingParent 
       }
     }
 
-    if (mPullLoadEnable && mCurrentAction == LOAD_MORE) {
+    if (!isTargetOfWXRV() && mPullLoadEnable && mCurrentAction == LOAD_MORE) {
       lp = (LayoutParams) footerView.getLayoutParams();
       if (lp.height >= loadingViewHeight) {
         startLoadmore(lp.height);
@@ -741,6 +823,10 @@ public class WXSwipeLayout extends FrameLayout implements NestedScrollingParent 
 
   public void setOnLoadingListener(WXOnLoadingListener onLoadingListener) {
     this.onLoadingListener = onLoadingListener;
+    WXRecyclerView wxRecyclerView = getRecyclerView();
+    if(wxRecyclerView != null) {
+      wxRecyclerView.setFooterView();
+    }
   }
 
   public void setOnRefreshListener(WXOnRefreshListener onRefreshListener) {
@@ -760,8 +846,15 @@ public class WXSwipeLayout extends FrameLayout implements NestedScrollingParent 
    * Callback on loadmore finish
    */
   public void finishPullLoad() {
+    WXRecyclerView wxRecyclerView = getRecyclerView();
     if (mCurrentAction == LOAD_MORE) {
-      resetFootView(footerView == null ? 0 : footerView.getMeasuredHeight());
+      if(wxRecyclerView == null){
+        resetFootView(footerView == null ? 0 : footerView.getMeasuredHeight());
+      }else{
+        wxRecyclerView.updateFooter("加载完成");
+        wxRecyclerView.removeFooter();
+        resetLoadmoreState();
+      }
     }
   }
 

@@ -202,201 +202,81 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
-package com.taobao.weex.ui.view.listview;
+package com.taobao.weex.ui.view.listview.loadmore;
 
 import android.content.Context;
-import android.support.annotation.Nullable;
-import android.support.v7.widget.GridLayoutManager;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.OrientationHelper;
+import android.graphics.Canvas;
+import android.graphics.Rect;
 import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.StaggeredGridLayoutManager;
-import android.view.MotionEvent;
 
-import com.taobao.weex.common.WXThread;
-import com.taobao.weex.ui.view.gesture.WXGesture;
-import com.taobao.weex.ui.view.gesture.WXGestureObservable;
-import com.taobao.weex.ui.view.listview.loadmore.DefaultLoadMoreView;
+/**
+ * Created by Linhh on 15/11/15.
+ */
+public class BaseLoadMoreView extends RecyclerView.ItemDecoration {
 
-import java.util.Timer;
-import java.util.TimerTask;
+    protected RecyclerView mRecyclerView;
+    protected String mLoadMoreString;
+    protected static final int MSG_INVILIDATE = 1;
+    protected long mUpdateTime = 150;
+    protected int mLoadMorePadding = 100;
+    protected OnDrawListener mOnDrawListener;
 
-public class WXRecyclerView extends RecyclerView implements WXGestureObservable {
-
-  public static final int TYPE_LINEAR_LAYOUT = 1;
-  public static final int TYPE_GRID_LAYOUT = 2;
-  public static final int TYPE_STAGGERED_GRID_LAYOUT = 3;
-  private WXGesture mGesture;
-
-  private boolean scrollable = true;
-
-  private WXRVOnScrollListener onScrollListener;
-
-  public WXRecyclerView(Context context) {
-    super(context);
-  }
-
-  public boolean isScrollable() {
-    return scrollable;
-  }
-
-  public void setScrollable(boolean scrollable) {
-    this.scrollable = scrollable;
-  }
-
-  @Override
-  public boolean postDelayed(Runnable action, long delayMillis) {
-    return super.postDelayed(WXThread.secure(action), delayMillis);
-  }
-
-  /**
-   * On loadmore Callback, call on start loadmore
-   */
-  public interface WXRVOnLoadingListener {
-
-    void onLoading();
-    void onPullingUp(float dy, int pullOutDistance, float viewHeight);
-  }
-
-  public interface WXRVOnScrollListener {
-    void onScrollStateChanged(int state);
-  }
-
-  /**
-   *
-   * @param context
-   * @param type
-   * @param orientation should be {@link OrientationHelper#HORIZONTAL} or {@link OrientationHelper#VERTICAL}
-   */
-  public void initView(Context context, int type,int orientation) {
-    if (type == TYPE_GRID_LAYOUT) {
-      setLayoutManager(new GridLayoutManager(context, 2,orientation,false));
-    } else if (type == TYPE_STAGGERED_GRID_LAYOUT) {
-      setLayoutManager(new StaggeredGridLayoutManager(2, orientation));
-    } else if (type == TYPE_LINEAR_LAYOUT) {
-      setLayoutManager(new LinearLayoutManager(context,orientation,false){
-
-        @Override
-        public boolean supportsPredictiveItemAnimations() {
-          return false;
-        }
-
-        public void onLayoutChildren(Recycler recycler, State state) {
-          try {
-            super.onLayoutChildren(recycler, state);
-          } catch (IndexOutOfBoundsException e) {
-             e.printStackTrace();
-
-          }
-        }
-
-        @Override
-        public int scrollVerticallyBy(int dy, Recycler recycler, State state) {
-          try {
-            return super.scrollVerticallyBy(dy, recycler, state);
-          } catch (Exception e) {
-            e.printStackTrace();
-          }
-          return 0;
-        }
-
-      });
+    public BaseLoadMoreView(Context context, RecyclerView recyclerView){
+        mRecyclerView = recyclerView;
     }
-  }
 
-  private boolean mStop = false;
+    public interface OnDrawListener{
+        public boolean onDrawLoadMore(Canvas c, RecyclerView parent);
+    }
 
-  private final Timer timer = new Timer();
-  private boolean mAddFooter = false;
+    public void setLoadmoreString(String str) {
+        mLoadMoreString = str;
+    }
 
-  private final TimerTask timerTask = new TimerTask() {
+    public String getLoadmoreString(){
+        return mLoadMoreString;
+    }
+
+    public int getLoadMorePadding(){
+        return mLoadMorePadding;
+    }
+
+    public void setLoadMorePadding(int padding){
+        mLoadMorePadding = padding;
+    }
+
+
     @Override
-    public void run() {
-      if(mStop){
-        return;
-      }
-      if(!mAddFooter){
-        return;
-      }
-      if(defaultLoadMoreView != null){
-        defaultLoadMoreView.updateProgress();
-        post(new Runnable() {
-          @Override
-          public void run() {
-            invalidate();
-          }
-        });
-      }
-    }
-  };
-
-  @Override
-  protected void onDetachedFromWindow() {
-    super.onDetachedFromWindow();
-    mStop = true;
-    mAddFooter = false;
-    if(timer != null){
-      timer.cancel();
-    }
-  }
-
-  public void addFooter(){
-//    mAddFooter = true;
-    if(defaultLoadMoreView != null){
-      defaultLoadMoreView.setLoading(true);
-    }
-  }
-
-  public void updateFooter(String str){
-    if(defaultLoadMoreView!= null){
-      defaultLoadMoreView.setLoadmoreString(str);
-    }
-  }
-
-  public void removeFooter(){
-    if(defaultLoadMoreView != null){
-      defaultLoadMoreView.setLoading(false);
-    }
-//    mAddFooter = false;
-//    removeItemDecoration(defaultLoadMoreView);
-  }
-
-  DefaultLoadMoreView defaultLoadMoreView = new DefaultLoadMoreView(getContext(), this);
-
-  public void setFooterView(){
-    mAddFooter = true;
-    timer.schedule(timerTask, 0, 100);
-    addItemDecoration(defaultLoadMoreView);
-  }
-
-  public void setOnScrollListener(WXRVOnScrollListener scrollListener){
-    onScrollListener = scrollListener;
-  }
-
-  @Override
-  public void registerGestureListener(@Nullable WXGesture wxGesture) {
-    mGesture = wxGesture;
-  }
-
-  @Override
-  public boolean onTouchEvent(MotionEvent event) {
-    if(!scrollable) {
-      return true;
-    }
-    boolean result = super.onTouchEvent(event);
-    if (mGesture != null) {
-      result |= mGesture.onTouch(this, event);
-    }
-    return result;
-  }
-
-
-  @Override
-  public void onScrollStateChanged(int state) {
-    super.onScrollStateChanged(state);
-    if(onScrollListener != null){
-      onScrollListener.onScrollStateChanged(state);
+    public void onDrawOver(Canvas c, RecyclerView parent, RecyclerView.State state) {
+        super.onDrawOver(c, parent, state);
+        onDrawLoadMore(c, parent);
     }
 
-  }
+    /**
+     * @param outRect
+     * @param itemPosition
+     * @param parent
+     */
+    @Override
+    public void getItemOffsets(Rect outRect, int itemPosition, RecyclerView parent) {
+        if(itemPosition == parent.getAdapter().getItemCount() - 1) {
+            outRect.set(0, 0, 0, getLoadMorePadding());
+        }
+    }
+
+    protected void onDrawLoadMore(Canvas c, RecyclerView parent){
+        if(mOnDrawListener != null){
+            if(mOnDrawListener.onDrawLoadMore(c,parent)){
+                return;
+            }
+        }
+    }
+
+    public void setOnDrawListener(OnDrawListener listener){
+        mOnDrawListener = listener;
+    }
+
+    public void release(){
+        mRecyclerView = null;
+    }
 }

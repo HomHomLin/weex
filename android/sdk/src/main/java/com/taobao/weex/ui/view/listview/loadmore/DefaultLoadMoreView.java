@@ -202,201 +202,84 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
-package com.taobao.weex.ui.view.listview;
+package com.taobao.weex.ui.view.listview.loadmore;
 
 import android.content.Context;
-import android.support.annotation.Nullable;
-import android.support.v7.widget.GridLayoutManager;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.OrientationHelper;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.RectF;
 import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.StaggeredGridLayoutManager;
-import android.view.MotionEvent;
+import android.view.View;
 
-import com.taobao.weex.common.WXThread;
-import com.taobao.weex.ui.view.gesture.WXGesture;
-import com.taobao.weex.ui.view.gesture.WXGestureObservable;
-import com.taobao.weex.ui.view.listview.loadmore.DefaultLoadMoreView;
 
-import java.util.Timer;
-import java.util.TimerTask;
+/**
+ * Created by Linhh on 15/11/15.
+ */
+public class DefaultLoadMoreView extends BaseLoadMoreView {
 
-public class WXRecyclerView extends RecyclerView implements WXGestureObservable {
+    private Paint paint;
+    private RectF oval;
 
-  public static final int TYPE_LINEAR_LAYOUT = 1;
-  public static final int TYPE_GRID_LAYOUT = 2;
-  public static final int TYPE_STAGGERED_GRID_LAYOUT = 3;
-  private WXGesture mGesture;
+    private int mCircleSize = 25;
 
-  private boolean scrollable = true;
+    private int mProgress = 30;//圆圈比例
 
-  private WXRVOnScrollListener onScrollListener;
+    private int mCircleOffset = 70;
 
-  public WXRecyclerView(Context context) {
-    super(context);
-  }
+    private boolean mLoading = true;
 
-  public boolean isScrollable() {
-    return scrollable;
-  }
-
-  public void setScrollable(boolean scrollable) {
-    this.scrollable = scrollable;
-  }
-
-  @Override
-  public boolean postDelayed(Runnable action, long delayMillis) {
-    return super.postDelayed(WXThread.secure(action), delayMillis);
-  }
-
-  /**
-   * On loadmore Callback, call on start loadmore
-   */
-  public interface WXRVOnLoadingListener {
-
-    void onLoading();
-    void onPullingUp(float dy, int pullOutDistance, float viewHeight);
-  }
-
-  public interface WXRVOnScrollListener {
-    void onScrollStateChanged(int state);
-  }
-
-  /**
-   *
-   * @param context
-   * @param type
-   * @param orientation should be {@link OrientationHelper#HORIZONTAL} or {@link OrientationHelper#VERTICAL}
-   */
-  public void initView(Context context, int type,int orientation) {
-    if (type == TYPE_GRID_LAYOUT) {
-      setLayoutManager(new GridLayoutManager(context, 2,orientation,false));
-    } else if (type == TYPE_STAGGERED_GRID_LAYOUT) {
-      setLayoutManager(new StaggeredGridLayoutManager(2, orientation));
-    } else if (type == TYPE_LINEAR_LAYOUT) {
-      setLayoutManager(new LinearLayoutManager(context,orientation,false){
-
-        @Override
-        public boolean supportsPredictiveItemAnimations() {
-          return false;
-        }
-
-        public void onLayoutChildren(Recycler recycler, State state) {
-          try {
-            super.onLayoutChildren(recycler, state);
-          } catch (IndexOutOfBoundsException e) {
-             e.printStackTrace();
-
-          }
-        }
-
-        @Override
-        public int scrollVerticallyBy(int dy, Recycler recycler, State state) {
-          try {
-            return super.scrollVerticallyBy(dy, recycler, state);
-          } catch (Exception e) {
-            e.printStackTrace();
-          }
-          return 0;
-        }
-
-      });
+    public DefaultLoadMoreView(Context context, RecyclerView recyclerView) {
+        super(context, recyclerView);
+        paint = new Paint();
+        oval = new RectF();
+        setLoadmoreString("加载中...");
+//        mLoadMoreString = context.getString(R.string.loading);
     }
-  }
 
-  private boolean mStop = false;
+    public void setLoading(boolean loading){
+        mLoading = loading;
+    }
 
-  private final Timer timer = new Timer();
-  private boolean mAddFooter = false;
+    public void updateProgress(){
+        mProgress = mProgress + 5;
+        if(mProgress == 100){
+            mProgress = 0;
+        }
+    }
 
-  private final TimerTask timerTask = new TimerTask() {
     @Override
-    public void run() {
-      if(mStop){
-        return;
-      }
-      if(!mAddFooter){
-        return;
-      }
-      if(defaultLoadMoreView != null){
-        defaultLoadMoreView.updateProgress();
-        post(new Runnable() {
-          @Override
-          public void run() {
-            invalidate();
-          }
-        });
-      }
-    }
-  };
-
-  @Override
-  protected void onDetachedFromWindow() {
-    super.onDetachedFromWindow();
-    mStop = true;
-    mAddFooter = false;
-    if(timer != null){
-      timer.cancel();
-    }
-  }
-
-  public void addFooter(){
-//    mAddFooter = true;
-    if(defaultLoadMoreView != null){
-      defaultLoadMoreView.setLoading(true);
-    }
-  }
-
-  public void updateFooter(String str){
-    if(defaultLoadMoreView!= null){
-      defaultLoadMoreView.setLoadmoreString(str);
-    }
-  }
-
-  public void removeFooter(){
-    if(defaultLoadMoreView != null){
-      defaultLoadMoreView.setLoading(false);
-    }
-//    mAddFooter = false;
-//    removeItemDecoration(defaultLoadMoreView);
-  }
-
-  DefaultLoadMoreView defaultLoadMoreView = new DefaultLoadMoreView(getContext(), this);
-
-  public void setFooterView(){
-    mAddFooter = true;
-    timer.schedule(timerTask, 0, 100);
-    addItemDecoration(defaultLoadMoreView);
-  }
-
-  public void setOnScrollListener(WXRVOnScrollListener scrollListener){
-    onScrollListener = scrollListener;
-  }
-
-  @Override
-  public void registerGestureListener(@Nullable WXGesture wxGesture) {
-    mGesture = wxGesture;
-  }
-
-  @Override
-  public boolean onTouchEvent(MotionEvent event) {
-    if(!scrollable) {
-      return true;
-    }
-    boolean result = super.onTouchEvent(event);
-    if (mGesture != null) {
-      result |= mGesture.onTouch(this, event);
-    }
-    return result;
-  }
-
-
-  @Override
-  public void onScrollStateChanged(int state) {
-    super.onScrollStateChanged(state);
-    if(onScrollListener != null){
-      onScrollListener.onScrollStateChanged(state);
+    public void onDrawLoadMore(Canvas c, RecyclerView parent) {
+        super.onDrawLoadMore(c,parent);
+        final int left = parent.getPaddingLeft() ;
+        final int right = parent.getMeasuredWidth() - parent.getPaddingRight() ;
+        final int childSize = parent.getChildCount() ;
+        final View child = parent.getChildAt( childSize - 1 ) ;
+        RecyclerView.LayoutParams layoutParams = (RecyclerView.LayoutParams) child.getLayoutParams();
+        final int top = child.getBottom() + layoutParams.bottomMargin ;
+        final int bottom = top + getLoadMorePadding()/2 ;
+        if(mLoading) {
+            paint.setAntiAlias(true);// 抗锯齿
+            paint.setFlags(Paint.ANTI_ALIAS_FLAG);// 增强消除锯齿
+            paint.setColor(Color.GRAY);// 画笔为灰色
+            paint.setStrokeWidth(10);// 画笔宽度
+            paint.setStyle(Paint.Style.STROKE);// 中空
+            c.drawCircle((right - left) / 2 - mCircleOffset, bottom, mCircleSize, paint);//在中心为（(right - left)/2,bottom）的地方画个半径为mCircleSize的圆，
+            paint.setColor(Color.GREEN);// 设置画笔为绿色
+            oval.set((right - left) / 2 - mCircleOffset - mCircleSize, bottom - mCircleSize, (right - left) / 2 - mCircleOffset + mCircleSize, bottom + mCircleSize);// 在Circle小于圈圈大小的地方画圆，这样也就保证了半径为mCircleSize
+            c.drawArc(oval, -90, ((float) mProgress / 100) * 360, false, paint);// 圆弧，第二个参数为：起始角度，第三个为跨的角度，第四个为true的时候是实心，false的时候为空心
+        }
+        paint.reset();// 将画笔重置
+        paint.setAntiAlias(true);// 抗锯齿
+        paint.setFlags(Paint.ANTI_ALIAS_FLAG);// 增强消除锯齿
+        paint.setStrokeWidth(3);// 再次设置画笔的宽度
+        paint.setTextSize(40);// 设置文字的大小
+        paint.setColor(Color.BLACK);// 设置画笔颜色
+        if(mLoading) {
+            c.drawText(getLoadmoreString(), (right - left) / 2, bottom + 10, paint);
+        }else{
+            c.drawText(getLoadmoreString(), (right - left) / 2 - mCircleOffset, bottom + 10, paint);
+        }
     }
 
-  }
 }
