@@ -1,11 +1,16 @@
 # Weex-Fork    
-该fork基于最新Weex-dev，调整了Weex默认的list加载更多方式，简单暴力修改了源码，使其拥有自然滑动加载更多的能力。
+该fork基于最新Weex-dev，调整了Weex默认的list加载更多方式，简单暴力修改了源码，使其拥有自然滑动加载更多的能力。【仅修改了Android】
 考虑到目前WEEX处于发展阶段，因此该修改仅仅用作前期需求的满足，因此不修改至官方的SDK。
 直接将该fork引入项目中替换原本官方的sdk即可，修改了WXRecyclerView以及Swipe的代码。
+效果图如下：
 
 ![Screenshot](https://github.com/HomHomLin/weex/blob/dev/list_load_1.gif)
 
 ![Screenshot](https://github.com/HomHomLin/weex/blob/dev/list_load_2.gif)
+
+如果你有什么需要改进的，请提交到该fork，近期美柚架构技术会有大动作，请大家留意。
+
+顺便发个广告，我们美柚在招人，base在厦门，岗位Android开发，面向多个产品，有意者请投递简历到linhonghong@xiaoyouzi.com。标题前请带上前缀[GitHub美柚简历]。关于任何问题可以提issue。
 
 # Week
 Android[![Download](https://api.bintray.com/packages/alibabaweex/maven/weex_sdk/images/download.svg)](https://bintray.com/alibabaweex/maven/weex_sdk/_latestVersion)
