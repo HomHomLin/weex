@@ -12,8 +12,6 @@
 
 如果你有什么需要改进的，请提交到该fork，近期美柚架构技术会有大动作，请大家留意。
 
-顺便发个广告，我们美柚在招人，base在厦门，岗位Android开发，面向多个产品，有意者请投递简历到linhonghong@xiaoyouzi.com。标题前请带上前缀[GitHub美柚简历]。关于任何问题可以提issue。
-
 # Week
 Android[![Download](https://api.bintray.com/packages/alibabaweex/maven/weex_sdk/images/download.svg)](https://bintray.com/alibabaweex/maven/weex_sdk/_latestVersion)
 iOS[![Pod version](https://badge.fury.io/co/WeexSDK.svg)](https://cocoapods.org/pods/WeexSDK)
