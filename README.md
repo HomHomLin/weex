@@ -1,4 +1,13 @@
-# Weex    
+# Weex-Fork    
+该fork基于最新Weex-dev，调整了Weex默认的list加载更多方式，简单暴力修改了源码，使其拥有自然滑动加载更多的能力。
+考虑到目前WEEX处于发展阶段，因此该修改仅仅用作前期需求的满足，因此不修改至官方的SDK。
+直接将该fork引入项目中替换原本官方的sdk即可，修改了WXRecyclerView以及Swipe的代码。
+
+![Screenshot](https://github.com/HomHomLin/weex/blob/dev/list_load_1.gif)
+
+![Screenshot](https://github.com/HomHomLin/weex/blob/dev/list_load_2.gif)
+
+# Week
 Android[![Download](https://api.bintray.com/packages/alibabaweex/maven/weex_sdk/images/download.svg)](https://bintray.com/alibabaweex/maven/weex_sdk/_latestVersion)
 iOS[![Pod version](https://badge.fury.io/co/WeexSDK.svg)](https://cocoapods.org/pods/WeexSDK)
 HTML5[![npm version](https://badge.fury.io/js/weex-html5.svg)](https://www.npmjs.com/package/weex-html5)
