@@ -10,7 +10,7 @@
 
 ![Screenshot](https://github.com/HomHomLin/weex/blob/dev/list_load_2.gif)
 
-如果你有什么需要改进的，请提交到该fork，近期美柚架构技术会有大动作，请大家留意。
+如果你有什么需要改进的，请提交到该fork。
 
 # Week
 Android[![Download](https://api.bintray.com/packages/alibabaweex/maven/weex_sdk/images/download.svg)](https://bintray.com/alibabaweex/maven/weex_sdk/_latestVersion)
